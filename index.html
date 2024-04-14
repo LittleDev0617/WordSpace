@@ -35,21 +35,96 @@
     </script>
 
     <script>
-        var letters = [];
+        function normalize(vec) {
+            var length = vec.length();
+            return { x: vec.x / length, y: vec.y / length};
+        }
 
+        function Vector2D(x, y) {
+            this.x = x;
+            this.y = y;
+
+            this.sub = (other) => {
+                return new Vector2D(this.x-other.x, this.y-other.y);
+            }
+
+            this.add = (other) => {
+                return new Vector2D(this.x+other.x, this.y+other.y);
+            }            
+
+            this.length = () => {
+                return Math.sqrt(this.x ** 2 + this.y ** 2);
+            }
+
+            this.distance = (other) => {
+                return this.sub(other).length();
+            }
+        }
+    </script>
+
+    <script>
+        var letters = [];
+        
         class Letter {
             constructor(letter, x, y) {
                 this.val = letter;
-                this.x = x;
-                this.y = y;
+                this.r = new Vector2D(x, y);
+                
+                this.angle = (Math.random() - 0.5) * 2 * Math.PI;
+                // this.velocity = new Vector2D(Math.random() - 0.5, Math.random() - 0.5);    
+                this.velocity = new Vector2D(0,0);            
+            }
 
-                this.vx = Math.random() - 0.5;
-                this.vy = Math.random() - 0.5;
+            getGravity(other) {
+                var f = 9.8 / (this.r.distance(other.r) ** 2) * 0.01;
+                var _r = this.r.sub(other.r);
+                return new Vector2D(f * _r.x, f * _r.y);
+            }
+
+            getForce() {
+                var force = letters.reduce((acc, cur, idx) => {
+                    if(cur == this) return acc;
+                    
+                    var f = cur.getGravity(this);
+                    console.log(f)
+                    acc = acc.add(f);
+                    return acc;
+                }, new Vector2D(0, 0));
+                
+                return force;
             }
 
             update() {
-                this.x += this.vx;
-                this.y += this.vy;
+                this.velocity = this.velocity.add(this.getForce());
+                this.r = this.r.add(this.velocity);
+            }
+
+            debug() {
+                ctx.save();
+                var f = this.getForce();
+                ctx.translate(this.r.x+10, this.r.y-15);
+                ctx.rotate(Math.atan2(f.y, f.x));
+
+                var red = -1 / (f.length() * 2000 + 1) + 1; // 0 ~ 1                
+                red *= 255;
+                console.log('rgb(' + red.toString() + ', ' + (256-red).toString() + ', 0)')
+                ctx.fillStyle = 'rgb(' + red.toString() + ', ' + (256-red).toString() + ', 0)';
+                ctx.fillRect(0, 0, f.length() * 50000, 5);
+                ctx.restore();
+            }
+            
+            draw() {
+                this.update();
+                
+                ctx.save();
+                ctx.fillStyle = 'white';
+                ctx.font = "48px Consolas";
+                ctx.translate(this.r.x, this.r.y);
+                // ctx.rotate(this.angle);
+                ctx.fillText(this.val, 0, 0);
+                ctx.restore();
+
+                this.debug();
             }
         }
 
@@ -57,14 +132,7 @@
             ctx.fillStyle = 'black';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            console.log(letters);
-            letters.forEach((letter)=>{
-                letter.update();
-
-                ctx.fillStyle = 'white';
-                ctx.font = "48px Consolas";
-                ctx.fillText(letter.val, letter.x, letter.y);
-            })
+            letters.forEach(l => l.draw());
 
             window.requestAnimationFrame(draw);
         }
@@ -78,7 +146,9 @@
         }
 
         window.addEventListener('keydown', (e)=>{
-            createLetter(e.key)
+            if ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 65 && e.keyCode <= 90)){
+                createLetter(e.key);
+            }
         });
         
         resize();
