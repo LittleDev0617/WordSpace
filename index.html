@@ -15,10 +15,21 @@
             width: 100%;
             height: 100%;
         }
+
+        #canvas, #canvas_bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #canvas_div {
+            position: relative;
+        }
     </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
+    <div><canvas id="canvas"></canvas></div>
+        
     <script>
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
@@ -27,8 +38,7 @@
     <script>
         function resize() {
             canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            
+            canvas.height = window.innerHeight;            
             draw();
         }
         window.addEventListener('resize', resize);
@@ -70,7 +80,8 @@
             - 글자 회전?
             * 각 글자 간 가중치 설정(영단어 리스트로부터 각 알파벳 간의 결합력? 분석)
             * 뭉쳐진 알파벳들로 단어가 생성 -> 행성     
-            * 항성? 성운? 블랙홀? 등등 아이디어 생각해보기       
+            * 항성? 성운? 블랙홀? 등등 아이디어 생각해보기
+            * 최적화       
         */
         var letters = [];
         
@@ -91,7 +102,8 @@
             }
 
             getForce() {
-                var force = letters.reduce((acc, cur, idx) => {
+                var _letters = letters.filter((letter) => this.r.distance(letter.r) < 300);
+                var force = _letters.reduce((acc, cur, idx) => {
                     if(cur == this) return acc;
                     
                     var f = cur.getGravity(this);
@@ -104,8 +116,13 @@
             }
 
             update() {
-                this.velocity = this.velocity.add(this.getForce());
+                // this.velocity = this.velocity.add(this.getForce());
+                this.addForce(this.getForce());
                 this.r = this.r.add(this.velocity);
+            }
+
+            addForce(force) {
+                this.velocity = this.velocity.add(force);
             }
 
             debug() {
@@ -116,13 +133,15 @@
 
                 var red = -1 / (f.length() * 2000 + 1) + 1; // 0 ~ 1                
                 red *= 255;
-                console.log('rgb(' + red.toString() + ', ' + (256-red).toString() + ', 0)')
+                // console.log('rgb(' + red.toString() + ', ' + (256-red).toString() + ', 0)')
                 ctx.fillStyle = 'rgb(' + red.toString() + ', ' + (256-red).toString() + ', 0)';
                 ctx.fillRect(0, 0, f.length() * 50000, 5);
                 ctx.restore();
             }
             
             draw() {
+                // ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
                 this.update();
                 
                 ctx.save();
@@ -138,8 +157,9 @@
         }
 
         function draw() {
-            ctx.fillStyle = 'black';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // ctx.fillStyle = 'black';
+            // ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawBG();
 
             letters.forEach(l => l.draw());
 
@@ -161,8 +181,34 @@
         });
         
         resize();
-        draw();
 
+        var scale = 100;
+
+        function drawBG() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < canvas.height / scale; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * scale + scale);
+                ctx.lineTo(canvas.width, i * scale + scale);
+                ctx.closePath();
+                ctx.strokeStyle = 'rgba(0,255,0,0.5)';
+                ctx.stroke();
+            }
+            for (let j = 0; j < canvas.width / scale; j++) {
+                ctx.beginPath();
+                ctx.moveTo(j * scale + scale, 0);
+                ctx.lineTo(j * scale + scale, canvas.height);
+                ctx.closePath();
+                ctx.strokeStyle = 'rgba(0,255,0,0.5)';
+                ctx.stroke();
+            }
+        }
+        
+
+        // ctx.clearRect(0, 0, canvas.width, canvas.height)
+        drawBG();
+        draw();
         window.requestAnimationFrame(draw);
     </script>
 </body>
